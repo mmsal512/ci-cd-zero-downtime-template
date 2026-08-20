@@ -4,52 +4,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zero-Downtime Demo</title>
+    <title>Zero-Downtime Dashboard</title>
     <style>
         body {
-            font-family: sans-serif;
-            background: #0f172a;
-            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            background: #0b0f19;
+            color: #00ffcc;
             text-align: center;
-            margin-top: 10%;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .card {
-            background: #1e293b;
+        .dashboard {
+            background: #111827;
             padding: 40px;
-            border-radius: 10px;
-            display: inline-block;
-            border: 2px solid #334155;
+            border-radius: 12px;
+            border: 1px solid #1f2937;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.1);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
         }
 
-        .version {
-            font-size: 3rem;
-            color: #10b981;
-            margin: 20px 0;
+        h2 {
+            color: #ffffff;
+            margin-bottom: 30px;
+            letter-spacing: 1.5px;
+        }
+
+        .metric-box {
+            background: #1f2937;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #00ffcc;
+            text-align: left;
+        }
+
+        .metric-title {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
             font-weight: bold;
+            margin-top: 10px;
+            color: #00ffcc;
         }
 
         .cid {
-            color: #94a3b8;
+            font-size: 1.5rem;
+            color: #facc15;
             font-family: monospace;
-            font-size: 1.2rem;
+        }
+
+        /* حركة الترس المستمرة لإثبات عدم تحديث الصفحة */
+        .gear-container {
+            margin-top: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .gear {
+            font-size: 2rem;
+            animation: spin 2s linear infinite;
+            color: #3b82f6;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #00ffcc;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ffcc;
+            animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes ping {
+
+            75%,
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="card">
-        <h2>🚀 Zero-Downtime Deployment</h2>
-        <p>Current App Version:</p>
-        <div class="version">V 1.0.0</div>
-        <p>Container ID serving this request:</p>
-        <div class="cid" id="hostname">Loading...</div>
+    <div class="dashboard">
+        <h2><span class="pulse"></span> LIVE TRAFFIC ROUTING</h2>
+
+        <div class="metric-box">
+            <div class="metric-title">Live Application Version</div>
+            <!-- عند التحديث، قم بتغيير هذا الرقم فقط -->
+            <div class="metric-value" id="app-version">V 1.0.0</div>
+        </div>
+
+        <div class="metric-box">
+            <div class="metric-title">Active Container ID</div>
+            <div class="metric-value cid" id="hostname">Syncing...</div>
+        </div>
+
+        <div class="gear-container">
+            <div class="gear">⚙️</div>
+            <div>Connection maintained. Page is NOT reloading.</div>
+        </div>
     </div>
+
     <script>
         setInterval(() => {
+            // 1. تحديث رقم الحاوية
             fetch('/hostname')
                 .then(r => r.text())
-                .then(t => document.getElementById('hostname').innerText = t);
+                .then(t => document.getElementById('hostname').innerText = t.trim());
+
+            // 2. تحديث رقم الإصدار بصمت (بدون كاش)
+            fetch('/?t=' + new Date().getTime())
+                .then(r => r.text())
+                .then(html => {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const liveVersion = doc.getElementById('app-version').innerText;
+                    document.getElementById('app-version').innerText = liveVersion;
+                });
         }, 1000);
     </script>
 </body>

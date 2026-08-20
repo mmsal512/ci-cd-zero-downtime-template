@@ -108,5 +108,9 @@ jobs:
             # The Magic: Docker Rollout for Zero Downtime
             docker rollout -f docker-compose.yml -w 20 demo-prod
             
+            # 🧹 تنظيف الموارد: إيقاف وحذف حاوية الاختبار بعد نجاح الإنتاج
+            docker compose stop demo-test || true
+            docker compose rm -f demo-test || true
+            
             docker image prune -af --filter "until=24h"
           EOF
