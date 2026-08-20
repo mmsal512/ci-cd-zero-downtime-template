@@ -1,0 +1,112 @@
+name: CI/CD Zero-Downtime Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: "Choose Environment to Deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - "staging"
+          - "production"
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/true-zero-downtime-blueprint
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy-staging:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_env == 'staging')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🔐 Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐳 Build and Push Staging
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:staging
+
+      - name: 🔐 Connect via Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY_DEMO }}
+
+      - name: 🔑 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: 🧪 Deploy Staging Container
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << EOF
+            set -e
+            cd ~/true-zero-downtime-blueprint
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker pull ${{ env.IMAGE_NAME }}:staging
+            docker compose up -d --force-recreate demo-test
+          EOF
+
+  deploy-production:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_env == 'production'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔐 Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Promote Staging to Production
+        run: |
+          docker buildx imagetools create \
+            -t "${{ env.IMAGE_NAME }}:production" \
+            "${{ env.IMAGE_NAME }}:staging"
+
+      - name: 🔐 Connect via Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY_DEMO }}
+
+      - name: 🔑 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: 🚀 Deploy Production (Zero-Downtime)
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << EOF
+            set -e
+            cd ~/true-zero-downtime-blueprint
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            
+            docker pull ${{ env.IMAGE_NAME }}:production
+            
+            sed -i '/^DEPLOY_VERSION=/d' .env
+            echo "DEPLOY_VERSION=${{ github.run_id }}" >> .env
+            
+            # The Magic: Docker Rollout for Zero Downtime
+            docker rollout -f docker-compose.yml -w 20 demo-prod
+            
+            docker image prune -af --filter "until=24h"
+          EOF

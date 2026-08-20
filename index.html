@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero-Downtime Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            margin-top: 10%;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 10px;
+            display: inline-block;
+            border: 2px solid #334155;
+        }
+
+        .version {
+            font-size: 3rem;
+            color: #10b981;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .cid {
+            color: #94a3b8;
+            font-family: monospace;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h2>🚀 Zero-Downtime Deployment</h2>
+        <p>Current App Version:</p>
+        <div class="version">V 1.0.0</div>
+        <p>Container ID serving this request:</p>
+        <div class="cid" id="hostname">Loading...</div>
+    </div>
+    <script>
+        setInterval(() => {
+            fetch('/hostname')
+                .then(r => r.text())
+                .then(t => document.getElementById('hostname').innerText = t);
+        }, 1000);
+    </script>
+</body>
+
+</html>

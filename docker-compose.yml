@@ -1,0 +1,38 @@
+services:
+  # 🟢 1. بيئة الإنتاج (Live Production)
+  demo-prod:
+    image: ghcr.io/${GITHUB_USERNAME}/true-zero-downtime-blueprint:${DEPLOY_ENV:-production}
+    pull_policy: always
+    restart: always
+    environment:
+      - DEPLOY_VERSION=${DEPLOY_VERSION}
+    networks:
+      - web-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web-public"
+      - "traefik.http.routers.demoprod.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.demoprod.entrypoints=websecure"
+      - "traefik.http.routers.demoprod.tls.certresolver=letsencrypt"
+      - "traefik.http.services.demoprod.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  # 🧪 2. بيئة الاختبار (Staging)
+  demo-test:
+    image: ghcr.io/${GITHUB_USERNAME}/true-zero-downtime-blueprint:staging
+    pull_policy: always
+    restart: always
+    networks:
+      - web-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web-public"
+      - "traefik.http.routers.demotest.rule=Host(`${TEST_DOMAIN_NAME}`)"
+      - "traefik.http.routers.demotest.entrypoints=websecure"
+      - "traefik.http.routers.demotest.tls.certresolver=letsencrypt"
+      - "traefik.http.services.demotest.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=false"
+
+networks:
+  web-public:
+    external: true
