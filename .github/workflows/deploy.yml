@@ -15,7 +15,7 @@ on:
           - "production"
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/true-zero-downtime-blueprint
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/ci-cd-zero-downtime-template
 
 permissions:
   contents: read
@@ -58,7 +58,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << EOF
             set -e
-            cd ~/true-zero-downtime-blueprint
+            cd ~/ci-cd-zero-downtime-template
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             docker pull ${{ env.IMAGE_NAME }}:staging
             docker compose up -d --force-recreate demo-test
@@ -97,7 +97,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << EOF
             set -e
-            cd ~/true-zero-downtime-blueprint
+            cd ~/ci-cd-zero-downtime-template
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             
             docker pull ${{ env.IMAGE_NAME }}:production

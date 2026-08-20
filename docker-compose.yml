@@ -1,7 +1,7 @@
 services:
   # Production
   demo-prod:
-    image: ghcr.io/${GITHUB_USERNAME}/true-zero-downtime-blueprint:${DEPLOY_ENV:-production}
+    image: ghcr.io/${GITHUB_USERNAME}/ci-cd-zero-downtime-template:${DEPLOY_ENV:-production}
     pull_policy: always
     restart: always
     environment:
@@ -18,7 +18,7 @@ services:
 
   # Staging
   demo-test:
-    image: ghcr.io/${GITHUB_USERNAME}/true-zero-downtime-blueprint:staging
+    image: ghcr.io/${GITHUB_USERNAME}/ci-cd-zero-downtime-template:staging
     pull_policy: always
     restart: always
     networks:
